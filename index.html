@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Dashboard — Adventure Works Sales</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     TAB BAR — sticky atas
+══════════════════════════════════════════ -->
+<nav class="tab-bar">
+  <div class="tab-bar-brand">Adventure Works</div>
+  <button class="tab-btn active" id="tab-ai" onclick="switchTab('ai')">
+    AI Dashboard
+    <span class="tab-badge">D3 + LLM</span>
+  </button>
+  <button class="tab-btn tab-tableau" id="tab-tableau" onclick="switchTab('tableau')">
+    📊 Tableau
+    <span class="tab-badge">Tableau Public</span>
+  </button>
+</nav>
+
+<!-- ══════════════════════════════════════════
+     FILTER BAR — di bawah tab bar
+══════════════════════════════════════════ -->
+<div id="filter-bar-wrap" class="filter-bar">
+  <span class="filter-bar-label">Filter:</span>
+
+  <select id="filter-year" class="filter-select" aria-label="Filter Tahun">
+    <option value="all">Semua Tahun</option>
+  </select>
+
+  <select id="filter-category" class="filter-select" aria-label="Filter Kategori">
+    <option value="all">Semua Kategori</option>
+  </select>
+
+  <select id="filter-segment" class="filter-select" aria-label="Filter Segmen">
+    <option value="all">Semua Segmen</option>
+  </select>
+
+  <select id="filter-territory" class="filter-select" aria-label="Filter Wilayah">
+    <option value="all">Semua Wilayah</option>
+  </select>
+
+  <button class="filter-reset-btn" onclick="resetFilters()">↺ Reset Filter</button>
+
+  <span id="filter-count" style="font-size:11px;color:#818cf8;margin-left:8px;"></span>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PANEL TABLEAU
+══════════════════════════════════════════ -->
+<div id="panel-tableau">
+  <div class="tableau-wrap">
+    <div class="tableau-header">
+      <div>
+        <h2>Dashboard Adventure Works — Tableau Public</h2>
+        <p>Visualisasi interaktif dengan filter, drill-down, dan tooltip lintas grafik.</p>
+      </div>
+      <a class="tableau-link"
+         href="https://public.tableau.com/views/DashboardSuperstore_17803056910230/Dashboard1"
+         target="_blank" rel="noopener">
+        Buka di Tableau Public ↗
+      </a>
+    </div>
+    <div class="tableau-iframe-wrap">
+      <iframe id="tableau-iframe" src=""
+        data-src="https://public.tableau.com/views/DashboardSuperstore_17803056910230/Dashboard1?:embed=yes&:display_count=no&:toolbar=yes&:showVizHome=no"
+        allowfullscreen
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox">
+      </iframe>
+    </div>
+    <p class="tableau-note">Setelah publish Tableau Public, ganti URL di tag data-src dengan URL dashboard kamu.</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PANEL AI DASHBOARD
+══════════════════════════════════════════ -->
+<div id="panel-ai">
+
+<!-- ──────────────────────────────────────────
+     ZONA 1 — SETUP: Judul + KPI + Konteks
+────────────────────────────────────────── -->
+<section class="zone zone-setup">
+  <div class="zone-inner">
+
+    <span class="zone-kicker">Setup &nbsp;·&nbsp; Adventure Works Sales 2001–2004</span>
+
+    <!-- Judul naratif dari LLM -->
+    <h1 id="narrative-title">Memuat analisis data...</h1>
+
+    <!-- 6 KPI Cards -->
+    <div class="summary-cards" id="summary-cards"></div>
+
+    <!-- Teks konteks Setup dari LLM -->
+    <p id="setup-text" class="zone-desc"></p>
+
+  </div>
+</section>
+
+<!-- ──────────────────────────────────────────
+     ZONA 2 — CONFLICT: Anomali + Charts
+────────────────────────────────────────── -->
+<section class="zone zone-conflict">
+  <div class="zone-inner">
+
+    <span class="zone-kicker conflict">Conflict &nbsp;·&nbsp; Anomali Terdeteksi</span>
+    <p id="conflict-text" class="zone-desc"></p>
+
+    <!-- Alert Panel -->
+    <div class="alert-panel">
+      <div class="alert-panel-header">
+        <div class="aph-left">
+          <span class="alert-icon">🚨</span>
+          <span class="alert-title">Anomali Terdeteksi</span>
+          <span class="severity-badge severe"  id="badge-severe">0 Kritis</span>
+          <span class="severity-badge warning" id="badge-warning">0 Peringatan</span>
+        </div>
+        <button id="btn-narrate" onclick="requestAlertNarration()">🤖 Narasi AI</button>
+      </div>
+      <div class="alert-tabs">
+        <button class="alert-tab active" onclick="switchAlertTab('raw', this)">Data Anomali</button>
+        <button class="alert-tab"        onclick="switchAlertTab('ai',  this)">Narasi AI</button>
+      </div>
+      <div id="alert-tab-raw" class="alert-tab-content"></div>
+      <div id="alert-tab-ai"  class="alert-tab-content" style="display:none">
+        <div id="ai-narration-output">
+          <p class="placeholder-text">Klik "Narasi AI" untuk penjelasan anomali dari LLM.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts Grid: Subcat lebar kiri, 2 chart kanan -->
+    <div class="conflict-charts-grid">
+
+      <!-- Chart profit margin per SubKategori (anomaly highlight) -->
+      <div class="chart-card chart-card-wide">
+        <div class="chart-card-title">Profit Margin per Sub-Kategori</div>
+        <div class="chart-card-sub">Bar merah = anomali (Z-score ekstrem)</div>
+        <div class="chart-legend">
+          <span class="legend-dot accent"></span> Normal
+          <span class="legend-dot anomaly" style="margin-left:10px"></span> Anomali Kritis
+        </div>
+        <div id="chart-subcat"></div>
+      </div>
+
+      <!-- Charts kanan: kategori + territory -->
+      <div class="chart-side-col">
+        <div class="chart-card">
+          <div class="chart-card-title">Sales per Kategori</div>
+          <div id="chart-category"></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-card-title">Profit per Territory</div>
+          <div id="chart-territory"></div>
+        </div>
+      </div>
+
+    </div><!-- /conflict-charts-grid -->
+
+  </div>
+</section>
+
+<!-- ──────────────────────────────────────────
+     ZONA 3 — RESOLUTION: Insight + Charts Tambahan
+────────────────────────────────────────── -->
+<section class="zone zone-resolution">
+  <div class="zone-inner">
+
+    <span class="zone-kicker resolution">Resolution &nbsp;·&nbsp; Insight &amp; Rekomendasi</span>
+    <p id="resolution-text" class="zone-desc"></p>
+
+    <div class="resolution-grid">
+
+      <!-- Insight AI Panel -->
+      <div class="insight-card">
+        <div class="insight-header">
+          <h3>🤖 AI Insight</h3>
+          <span class="model-badge" id="model-badge">—</span>
+        </div>
+        <div id="insight-output" class="insight-output">
+          <p class="insight-placeholder">Memuat insight dari AI...</p>
+        </div>
+        <div class="insight-input-wrap">
+          <textarea id="custom-question"
+            placeholder="Tanya sesuatu tentang data ini..."
+            rows="2"></textarea>
+          <button id="btn-insight" onclick="requestInsight()">Tanya →</button>
+        </div>
+        <div class="quick-questions">
+          <p class="qq-label">Cepat:</p>
+          <button class="qbtn" onclick="quickAsk('Kategori mana yang harus diprioritaskan untuk meningkatkan profit?')">Prioritas profit?</button>
+          <button class="qbtn" onclick="quickAsk('Territory mana yang paling bermasalah dari sisi profit?')">Masalah wilayah?</button>
+          <button class="qbtn" onclick="quickAsk('Berikan 3 rekomendasi konkret untuk 1 tahun ke depan.')">Rekomendasi?</button>
+        </div>
+      </div>
+
+      <!-- Tabel ringkasan kategori -->
+      <div class="chart-card">
+        <div class="chart-card-title">Ringkasan Performa per Kategori</div>
+        <div id="category-table" style="padding-top:8px;"></div>
+      </div>
+
+    </div><!-- /resolution-grid -->
+
+    <!-- Charts tambahan: Tren + Segmen + Scatter -->
+    <div class="charts-bottom" style="margin-top:14px">
+
+      <!-- Tren bulanan -->
+      <div class="chart-card" style="grid-column: 1 / -1">
+        <div class="chart-card-title">Tren Sales &amp; Profit Bulanan</div>
+        <div class="chart-legend">
+          <span class="legend-dot sales"></span> Sales
+          <span class="legend-dot profit" style="margin-left:10px"></span> Profit (dashed)
+        </div>
+        <div id="chart-trend"></div>
+      </div>
+
+    </div>
+
+    <!-- Charts bawah: Scatter + Segmen -->
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-top:14px">
+
+      <!-- Scatter Sales vs Profit -->
+      <div class="chart-card">
+        <div class="chart-card-title">Scatter Plot: Sales vs Profit per Sub-Kategori</div>
+        <div class="chart-card-sub">Ukuran lingkaran = total Qty terjual. Sales tinggi ≠ profit tinggi.</div>
+        <div id="chart-scatter"></div>
+      </div>
+
+      <!-- Donut Segmen -->
+      <div class="chart-card">
+        <div class="chart-card-title">Sales per Segmen</div>
+        <div id="chart-segment"></div>
+        <div class="seg-leg-wrap" id="chart-segment-legend"></div>
+      </div>
+
+    </div>
+
+  </div>
+</section>
+
+</div><!-- /panel-ai -->
+
+<!-- ══════════════════════════════════════════
+     FOOTER
+══════════════════════════════════════════ -->
+<footer class="dash-footer">
+  <span>Dataset: Adventure Works Sales 2001–2004 &nbsp;·&nbsp; Powered by D3.js + AI &nbsp;·&nbsp; EAS DAVIS B</span>
+  <span>Model: <span id="footer-model">—</span></span>
+</footer>
+
+<!-- Script — urutan wajib: config → aiInsight → anomalyDetector → storyEngine → app -->
+<script src="config.js"></script>
+<script src="aiInsight.js"></script>
+<script src="anomalyDetector.js"></script>
+<script src="storyEngine.js"></script>
+<script src="app.js"></script>
+
+<script>
+// ── Render tabel kategori saat data siap ──────────────────────
+window.addEventListener('capstone-data-ready', function(e) {
+  const stats = e.detail;
+  const el = document.getElementById('category-table');
+  if (!el || !stats) return;
+
+  el.innerHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:11px;">
+      <thead>
+        <tr style="border-bottom:2px solid #e9e4fd;">
+          <th style="text-align:left;padding:6px 8px;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#6b7280;font-weight:700;">Kategori</th>
+          <th style="text-align:right;padding:6px 8px;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#6b7280;font-weight:700;">Sales</th>
+          <th style="text-align:right;padding:6px 8px;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#6b7280;font-weight:700;">Profit</th>
+          <th style="text-align:right;padding:6px 8px;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#6b7280;font-weight:700;">Margin</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${stats.categories.map((c, i) => `
+          <tr style="border-bottom:1px solid #f0eefb;${i % 2 === 0 ? '' : 'background:#faf9ff;'}">
+            <td style="padding:8px 8px;font-weight:600;color:#1e1b4b;">${c.category}</td>
+            <td style="padding:8px;text-align:right;color:#7c3aed;font-weight:600;">$${(c.sales/1000).toFixed(0)}K</td>
+            <td style="padding:8px;text-align:right;color:${c.profit >= 0 ? '#059669' : '#dc2626'};font-weight:600;">
+              $${(c.profit/1000).toFixed(1)}K
+            </td>
+            <td style="padding:8px;text-align:right;font-weight:700;
+              color:${+c.margin >= 40 ? '#059669' : +c.margin >= 15 ? '#7c3aed' : +c.margin >= 0 ? '#d97706' : '#dc2626'};">
+              ${c.margin}%
+            </td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+
+  // Update filter row count
+  const fc = document.getElementById('filter-count');
+  if (fc) fc.textContent = `${Number(stats.totalOrders).toLocaleString()} orders`;
+});
+
+// ── Tab switching ─────────────────────────────────────────────
+function switchTab(tab) {
+  document.getElementById('tab-ai').classList.toggle('active', tab === 'ai');
+  document.getElementById('tab-tableau').classList.toggle('active', tab === 'tableau');
+  document.getElementById('panel-ai').style.display      = tab === 'ai'      ? 'block' : 'none';
+  document.getElementById('panel-tableau').style.display = tab === 'tableau' ? 'block' : 'none';
+  document.getElementById('filter-bar-wrap').style.display = tab === 'ai' ? 'flex' : 'none';
+
+  if (tab === 'tableau') {
+    const iframe = document.getElementById('tableau-iframe');
+    if (!iframe.src || iframe.src === window.location.href) {
+      iframe.src = iframe.getAttribute('data-src');
+    }
+  }
+}
+
+// ── Reset semua filter ────────────────────────────────────────
+function resetFilters() {
+  ['filter-year','filter-category','filter-segment','filter-territory'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = 'all';
+  });
+  if (typeof filterState !== 'undefined') {
+    filterState.year = 'all'; filterState.category = 'all';
+    filterState.segment = 'all'; filterState.territory = 'all';
+    if (typeof applyFilters === 'function') applyFilters();
+  }
+}
+</script>
+</body>
+</html>

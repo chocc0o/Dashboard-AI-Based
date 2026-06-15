@@ -45,34 +45,6 @@ async function getInsight(stats, focusQuestion = '') {
   return await callGroq(prompt);
 }
 
-// ── Implementasi Ollama ───────────────────────────────────────
-async function callOllama(prompt) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 60000); // 60s timeout
-
-  try {
-    const res = await fetch(CONFIG.OLLAMA_URL, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      signal:  controller.signal,
-      body: JSON.stringify({
-        model:  CONFIG.OLLAMA_MODEL,
-        prompt: prompt,
-        stream: false,
-        options: { temperature: 0.3, num_predict: 800 }
-      })
-    });
-    clearTimeout(timeout);
-    if (!res.ok) throw new Error(`Ollama error: ${res.status} ${res.statusText}`);
-    const data = await res.json();
-    return data.response;
-  } catch (e) {
-    clearTimeout(timeout);
-    if (e.name === 'AbortError') throw new Error('Timeout: Ollama tidak merespons dalam 60 detik');
-    throw e;
-  }
-}
-
 // ── Implementasi Groq ─────────────────────────────────────────
 async function callGroq(prompt) {
   const res = await fetch(CONFIG.GROQ_URL, {

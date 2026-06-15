@@ -235,7 +235,48 @@
 </section>
 
 <!-- ──────────────────────────────────────────
-     ZONA 3 — RESOLUTION: Insight + Charts Tambahan
+     ZONA 3 — ANALISIS LANJUTAN: Tren, Scatter, Segmen
+────────────────────────────────────────── -->
+<section class="zone zone-analysis">
+  <div class="zone-inner">
+
+    <span class="zone-kicker analysis">Analisis &nbsp;·&nbsp; Tren &amp; Distribusi</span>
+    <p class="zone-desc ai-loaded">Tren bulanan, perbandingan sales vs profit antar sub-kategori, dan distribusi sales per segmen pelanggan.</p>
+
+    <!-- Tren bulanan -->
+    <div class="chart-card" style="margin-bottom:14px">
+      <div class="chart-card-title">Tren Sales &amp; Profit Bulanan</div>
+      <div class="chart-legend">
+        <span class="legend-dot sales"></span> Sales
+        <span class="legend-dot profit" style="margin-left:10px"></span> Profit (dashed)
+      </div>
+      <div id="chart-trend"></div>
+    </div>
+
+    <!-- Scatter + Segmen -->
+    <div class="analysis-bottom-grid">
+
+      <!-- Scatter Sales vs Profit -->
+      <div class="chart-card">
+        <div class="chart-card-title">Scatter Plot: Sales vs Profit per Sub-Kategori</div>
+        <div class="chart-card-sub">Ukuran lingkaran = total Qty terjual. Sales tinggi ≠ profit tinggi.</div>
+        <div id="chart-scatter"></div>
+      </div>
+
+      <!-- Donut Segmen -->
+      <div class="chart-card">
+        <div class="chart-card-title">Sales per Segmen</div>
+        <div id="chart-segment"></div>
+        <div class="seg-leg-wrap" id="chart-segment-legend"></div>
+      </div>
+
+    </div>
+
+  </div>
+</section>
+
+<!-- ──────────────────────────────────────────
+     ZONA 4 — RESOLUTION: Insight & Rekomendasi (PENUTUP)
 ────────────────────────────────────────── -->
 <section class="zone zone-resolution">
   <div class="zone-inner">
@@ -276,43 +317,8 @@
 
     </div><!-- /resolution-grid -->
 
-    <!-- Charts tambahan: Tren + Segmen + Scatter -->
-    <div class="charts-bottom" style="margin-top:14px">
-
-      <!-- Tren bulanan -->
-      <div class="chart-card" style="grid-column: 1 / -1">
-        <div class="chart-card-title">Tren Sales &amp; Profit Bulanan</div>
-        <div class="chart-legend">
-          <span class="legend-dot sales"></span> Sales
-          <span class="legend-dot profit" style="margin-left:10px"></span> Profit (dashed)
-        </div>
-        <div id="chart-trend"></div>
-      </div>
-
-    </div>
-
-    <!-- Charts bawah: Scatter + Segmen -->
-    <div style="display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-top:14px">
-
-      <!-- Scatter Sales vs Profit -->
-      <div class="chart-card">
-        <div class="chart-card-title">Scatter Plot: Sales vs Profit per Sub-Kategori</div>
-        <div class="chart-card-sub">Ukuran lingkaran = total Qty terjual. Sales tinggi ≠ profit tinggi.</div>
-        <div id="chart-scatter"></div>
-      </div>
-
-      <!-- Donut Segmen -->
-      <div class="chart-card">
-        <div class="chart-card-title">Sales per Segmen</div>
-        <div id="chart-segment"></div>
-        <div class="seg-leg-wrap" id="chart-segment-legend"></div>
-      </div>
-
-    </div>
-
   </div>
 </section>
-
 </div><!-- /panel-ai -->
 
 <!-- ══════════════════════════════════════════

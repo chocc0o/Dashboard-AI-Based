@@ -266,9 +266,11 @@ function styleAxis(g) {
 
 // ── renderSubcatChart: profit margin per subkat (anomaly highlight) ─
 function renderSubcatChart(data, anomalyMap) {
-  const margin = { top: 20, right: 60, bottom: 20, left: 140 };
-  const w = 560 - margin.left - margin.right;
-  const h = Math.max(160, data.length > 0 ? 220 : 160) - margin.top - margin.bottom;
+  const margin = { top: 16, right: 56, bottom: 32, left: 130 };
+  const w = 580 - margin.left - margin.right;
+  const rowH = 36;
+  const h = Math.max(rowH * 2, rowH * (data.length > 0 ? new Set(data.map(d=>d.subcat)).size : 1));
+
 
   const bySubcat = d3.rollups(data,
     v => ({ profit: d3.sum(v, d => d.profit), sales: d3.sum(v, d => d.sales) }),
@@ -287,10 +289,10 @@ function renderSubcatChart(data, anomalyMap) {
     .append('g').attr('transform', `translate(${margin.left},${margin.top})`);
 
   const ext = d3.extent(bySubcat, d => d.margin);
-  const xMin = Math.min(ext[0] * 1.1, -5);
-  const xMax = Math.max(ext[1] * 1.1,  5);
+  const xMin = Math.min(ext[0] - 5, -8);
+  const xMax = Math.max(ext[1] + 5,  8);
   const x = d3.scaleLinear().domain([xMin, xMax]).range([0, w]);
-  const y = d3.scaleBand().domain(bySubcat.map(d => d.name)).range([0, h]).padding(0.3);
+  const y = d3.scaleBand().domain(bySubcat.map(d => d.name)).range([0, h]).padding(0.35);
 
   // Grid lines
   svg.append('g').attr('class', 'grid')
@@ -322,30 +324,37 @@ function renderSubcatChart(data, anomalyMap) {
       return `${d.name}: ${d.margin}%${tag}`;
     });
 
-  // Labels
+  // Labels — selalu di luar ujung bar, jauh dari sumbu Y
   svg.selectAll('.bar-lbl').data(bySubcat).enter().append('text')
-    .attr('x', d => d.margin >= 0 ? x(d.margin) + 4 : x(d.margin) - 4)
+    .attr('x', d => {
+      if (d.margin >= 0) return x(d.margin) + 6;
+      // Untuk bar negatif: jika bar terlalu kecil/dekat 0, taruh label di kanan zero-line
+      return x(d.margin) - 6;
+    })
     .attr('y', d => y(d.name) + y.bandwidth() / 2)
     .attr('dominant-baseline', 'middle')
     .attr('text-anchor', d => d.margin >= 0 ? 'start' : 'end')
-    .attr('font-size', 10)
+    .attr('font-size', 11)
     .attr('fill', d => anomalyMap.has(d.name) ? CHART_COLORS.red : CHART_COLORS.text)
-    .attr('font-weight', d => anomalyMap.has(d.name) ? '700' : '400')
+    .attr('font-weight', d => anomalyMap.has(d.name) ? '700' : '500')
     .text(d => `${d.margin}%`);
 
-  // Anomaly markers
+  // Anomaly markers — di luar area chart (kanan)
   bySubcat.filter(d => anomalyMap.has(d.name)).forEach(d => {
     svg.append('text')
-      .attr('x', w + 8)
+      .attr('x', w + 12)
       .attr('y', y(d.name) + y.bandwidth() / 2)
       .attr('dominant-baseline', 'middle')
-      .attr('font-size', 11)
+      .attr('font-size', 12)
       .text(anomalyMap.get(d.name).severity === 'severe' ? '🔴' : '🟠');
   });
 
   const yAxis = svg.append('g').call(d3.axisLeft(y).tickSize(0));
   yAxis.select('.domain').remove();
-  yAxis.selectAll('text').attr('fill', CHART_COLORS.text).attr('font-size', 11).attr('font-weight', d => anomalyMap.has(d) ? '700' : '400');
+  yAxis.selectAll('text')
+    .attr('fill', d => anomalyMap.has(d) ? CHART_COLORS.red : CHART_COLORS.text)
+    .attr('font-size', 11)
+    .attr('font-weight', d => anomalyMap.has(d) ? '700' : '500');
 
   const xAxis = svg.append('g').attr('transform', `translate(0,${h})`).call(d3.axisBottom(x).ticks(5).tickFormat(d => `${d}%`));
   styleAxis(xAxis);
@@ -383,13 +392,14 @@ function renderCategoryChart(data) {
     .append('title').text(d => `${d.category}: $${(d.sales/1000).toFixed(1)}K`);
 
   svg.selectAll('.bar-lbl').data(byCategory).enter().append('text')
-    .attr('x', d => x(d.sales) + 4).attr('y', d => y(d.category) + y.bandwidth() / 2)
-    .attr('dominant-baseline', 'middle').attr('font-size', 10).attr('fill', CHART_COLORS.text)
+    .attr('x', d => x(d.sales) + 6).attr('y', d => y(d.category) + y.bandwidth() / 2)
+    .attr('dominant-baseline', 'middle').attr('font-size', 11).attr('font-weight', 500).attr('fill', CHART_COLORS.text)
     .text(d => `$${(d.sales/1000).toFixed(0)}K`);
 
   const yAxis = svg.append('g').call(d3.axisLeft(y).tickSize(0));
   yAxis.select('.domain').remove();
   styleAxis(yAxis);
+  yAxis.selectAll('text').attr('font-size', 11).attr('font-weight', 500);
 
   const xAxis = svg.append('g').attr('transform', `translate(0,${h})`).call(d3.axisBottom(x).ticks(4).tickFormat(d => `$${(d/1000).toFixed(0)}K`));
   styleAxis(xAxis);
@@ -397,7 +407,7 @@ function renderCategoryChart(data) {
 
 // ── renderTerritoryChart: profit per territory ────────────────
 function renderTerritoryChart(data) {
-  const margin = { top: 16, right: 20, bottom: 40, left: 110 };
+  const margin = { top: 16, right: 50, bottom: 40, left: 110 };
   const w = 340 - margin.left - margin.right;
   const h = 260 - margin.top  - margin.bottom;
 
@@ -432,16 +442,17 @@ function renderTerritoryChart(data) {
     .append('title').text(d => `${d.territory}: $${(d.profit/1000).toFixed(1)}K`);
 
   svg.selectAll('.bar-lbl').data(byTerr).enter().append('text')
-    .attr('x', d => d.profit >= 0 ? x(d.profit) + 3 : x(d.profit) - 3)
+    .attr('x', d => d.profit >= 0 ? x(d.profit) + 6 : x(d.profit) - 6)
     .attr('y', d => y(d.territory) + y.bandwidth() / 2)
     .attr('dominant-baseline', 'middle')
     .attr('text-anchor', d => d.profit >= 0 ? 'start' : 'end')
-    .attr('font-size', 9).attr('fill', CHART_COLORS.text)
+    .attr('font-size', 11).attr('font-weight', 500).attr('fill', CHART_COLORS.text)
     .text(d => `$${(d.profit/1000).toFixed(0)}K`);
 
   const yAxis = svg.append('g').call(d3.axisLeft(y).tickSize(0));
   yAxis.select('.domain').remove();
   styleAxis(yAxis);
+  yAxis.selectAll('text').attr('font-size', 11).attr('font-weight', 500);
 
   const xAxis = svg.append('g').attr('transform', `translate(0,${h})`).call(d3.axisBottom(x).ticks(4).tickFormat(d => `$${(d/1000).toFixed(0)}K`));
   styleAxis(xAxis);
@@ -449,9 +460,9 @@ function renderTerritoryChart(data) {
 
 // ── renderTrendChart: tren sales + profit bulanan ─────────────
 function renderTrendChart(data) {
-  const margin = { top: 20, right: 30, bottom: 40, left: 60 };
+  const margin = { top: 20, right: 30, bottom: 52, left: 64 };
   const w = 700 - margin.left - margin.right;
-  const h = 200 - margin.top  - margin.bottom;
+  const h = 220 - margin.top  - margin.bottom;
 
   const byMonth = d3.rollups(data,
     v => ({ sales: d3.sum(v, d => d.sales), profit: d3.sum(v, d => d.profit) }),
@@ -506,7 +517,7 @@ function renderTrendChart(data) {
 
   // Axes
   const xAxis = svg.append('g').attr('transform', `translate(0,${h})`).call(d3.axisBottom(x).ticks(6).tickFormat(d3.timeFormat('%b %Y')));
-  xAxis.selectAll('text').attr('transform', 'rotate(-30)').attr('text-anchor', 'end').attr('font-size', 9).attr('fill', CHART_COLORS.text);
+  xAxis.selectAll('text').attr('transform', 'rotate(-30)').attr('text-anchor', 'end').attr('font-size', 11).attr('fill', AXIS_STYLE.color);
   xAxis.select('.domain').attr('stroke', '#e5e7eb');
   xAxis.selectAll('.tick line').attr('stroke', '#e5e7eb');
 
@@ -519,7 +530,7 @@ function renderTrendChart(data) {
     const gx = i * 70;
     lg.append('line').attr('x1', gx).attr('x2', gx+18).attr('y1', 6).attr('y2', 6)
       .attr('stroke', col).attr('stroke-width', 2).attr('stroke-dasharray', dash ? '4,3' : 'none');
-    lg.append('text').attr('x', gx+22).attr('y', 10).attr('font-size', 10).attr('fill', CHART_COLORS.text).text(lbl);
+    lg.append('text').attr('x', gx+22).attr('y', 10).attr('font-size', 11).attr('fill', AXIS_STYLE.color).text(lbl);
   });
 }
 
@@ -567,9 +578,9 @@ function renderSegmentChart(data) {
 
 // ── renderScatterChart: Sales vs Profit per subkat ────────────
 function renderScatterChart(data) {
-  const margin = { top: 20, right: 30, bottom: 50, left: 70 };
-  const w = 500 - margin.left - margin.right;
-  const h = 220 - margin.top  - margin.bottom;
+  const margin = { top: 24, right: 30, bottom: 56, left: 76 };
+  const w = 620 - margin.left - margin.right;
+  const h = 320 - margin.top  - margin.bottom;
 
   const bySubcat = d3.rollups(data,
     v => ({
@@ -590,36 +601,71 @@ function renderScatterChart(data) {
     .append('g').attr('transform', `translate(${margin.left},${margin.top})`);
 
   const catColors = { Bikes: CHART_COLORS.primary, Accessories: CHART_COLORS.teal, Clothing: CHART_COLORS.amber };
-  const x = d3.scaleLinear().domain([0, d3.max(bySubcat, d => d.sales) * 1.1]).range([0, w]);
-  const y = d3.scaleLinear().domain([d3.min(bySubcat, d => d.profit) * 1.2, d3.max(bySubcat, d => d.profit) * 1.1]).range([h, 0]);
-  const rScale = d3.scaleSqrt().domain([0, d3.max(bySubcat, d => d.qty)]).range([6, 30]);
+  const x = d3.scaleLinear().domain([0, d3.max(bySubcat, d => d.sales) * 1.08]).range([0, w]);
+  const yMin = Math.min(0, d3.min(bySubcat, d => d.profit) * 1.3);
+  const yMax = d3.max(bySubcat, d => d.profit) * 1.15;
+  const y = d3.scaleLinear().domain([yMin, yMax]).range([h, 0]);
+  const rScale = d3.scaleSqrt().domain([0, d3.max(bySubcat, d => d.qty)]).range([5, 22]);
 
   // Grid
-  svg.append('g').selectAll('line').data(y.ticks(4)).enter().append('line')
+  svg.append('g').selectAll('line').data(y.ticks(5)).enter().append('line')
     .attr('x1', 0).attr('x2', w).attr('y1', d => y(d)).attr('y2', d => y(d))
     .attr('stroke', '#f0eefb').attr('stroke-width', 1);
   svg.append('line').attr('x1',0).attr('x2',w).attr('y1',y(0)).attr('y2',y(0))
     .attr('stroke','#9ca3af').attr('stroke-dasharray','4,3').attr('stroke-width',1);
 
-  svg.selectAll('.dot').data(bySubcat).enter().append('circle')
+  // Urutkan berdasarkan sales menurun, untuk menentukan posisi label yang tidak tumpang tindih
+  const sorted = [...bySubcat].sort((a, b) => b.sales - a.sales);
+
+  svg.selectAll('.dot').data(sorted).enter().append('circle')
     .attr('cx', d => x(d.sales)).attr('cy', d => y(d.profit))
     .attr('r', d => rScale(d.qty))
     .attr('fill', d => catColors[d.cat] || CHART_COLORS.primary)
-    .attr('opacity', 0.75).attr('stroke', '#fff').attr('stroke-width', 1.5)
+    .attr('opacity', 0.78).attr('stroke', '#fff').attr('stroke-width', 1.5)
     .append('title').text(d => `${d.name}\nSales: $${(d.sales/1000).toFixed(0)}K\nProfit: $${(d.profit/1000).toFixed(0)}K\nQty: ${d.qty.toLocaleString()}`);
 
-  svg.selectAll('.dot-lbl').data(bySubcat).enter().append('text')
-    .attr('x', d => x(d.sales)).attr('y', d => y(d.profit) - rScale(d.qty) - 3)
-    .attr('text-anchor', 'middle').attr('font-size', 9).attr('fill', CHART_COLORS.text)
+  // Label dengan leader-line untuk titik kecil yang berdekatan dengan origin
+  // Posisi label dipisah ke kanan dengan jarak vertikal bertingkat agar tidak tumpang tindih
+  const smallPointThreshold = x.range()[1] * 0.18; // titik dengan x < 18% lebar dianggap "kecil/dekat origin"
+  const clustered = sorted.filter(d => x(d.sales) < smallPointThreshold);
+  const normal    = sorted.filter(d => x(d.sales) >= smallPointThreshold);
+
+  // Label untuk titik normal: di atas bubble
+  svg.selectAll('.dot-lbl-normal').data(normal).enter().append('text')
+    .attr('x', d => x(d.sales))
+    .attr('y', d => y(d.profit) - rScale(d.qty) - 6)
+    .attr('text-anchor', 'middle')
+    .attr('font-size', 11).attr('font-weight', 600)
+    .attr('fill', CHART_COLORS.text)
     .text(d => d.name);
+
+  // Label untuk titik clustered: leader line ke kanan, bertingkat vertikal
+  clustered.forEach((d, i) => {
+    const cx = x(d.sales);
+    const cy = y(d.profit);
+    const labelX = smallPointThreshold + 70;
+    const labelY = 14 + i * 16; // bertingkat dari atas chart
+
+    svg.append('line')
+      .attr('x1', cx).attr('y1', cy)
+      .attr('x2', labelX - 4).attr('y2', labelY)
+      .attr('stroke', '#cbd5e1').attr('stroke-width', 1);
+
+    svg.append('text')
+      .attr('x', labelX).attr('y', labelY)
+      .attr('dominant-baseline', 'middle')
+      .attr('font-size', 11).attr('font-weight', 600)
+      .attr('fill', CHART_COLORS.text)
+      .text(d.name);
+  });
 
   const xAxis = svg.append('g').attr('transform', `translate(0,${h})`).call(d3.axisBottom(x).ticks(5).tickFormat(d => `$${(d/1000).toFixed(0)}K`));
   styleAxis(xAxis);
-  svg.append('text').attr('x', w/2).attr('y', h + 38).attr('text-anchor','middle').attr('font-size',10).attr('fill',CHART_COLORS.text).text('Sales');
+  svg.append('text').attr('x', w/2).attr('y', h + 42).attr('text-anchor','middle').attr('font-size',11).attr('fill',CHART_COLORS.text).text('Sales');
 
-  const yAxis = svg.append('g').call(d3.axisLeft(y).ticks(4).tickFormat(d => `$${(d/1000).toFixed(0)}K`));
+  const yAxis = svg.append('g').call(d3.axisLeft(y).ticks(5).tickFormat(d => `$${(d/1000).toFixed(0)}K`));
   styleAxis(yAxis);
-  svg.append('text').attr('transform','rotate(-90)').attr('x',-h/2).attr('y',-52).attr('text-anchor','middle').attr('font-size',10).attr('fill',CHART_COLORS.text).text('Profit');
+  svg.append('text').attr('transform','rotate(-90)').attr('x',-h/2).attr('y',-58).attr('text-anchor','middle').attr('font-size',11).attr('fill',CHART_COLORS.text).text('Profit');
 }
 
 // ── renderRawAnomalies ────────────────────────────────────────

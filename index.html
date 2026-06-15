@@ -18,11 +18,9 @@
   <div class="tab-bar-brand">Adventure Works</div>
   <button class="tab-btn active" id="tab-ai" onclick="switchTab('ai')">
     AI Dashboard
-    <span class="tab-badge">D3 + LLM</span>
   </button>
   <button class="tab-btn tab-tableau" id="tab-tableau" onclick="switchTab('tableau')">
     📊 Tableau
-    <span class="tab-badge">Tableau Public</span>
   </button>
 </nav>
 
@@ -56,29 +54,97 @@
 <!-- ══════════════════════════════════════════
      PANEL TABLEAU
 ══════════════════════════════════════════ -->
+<!-- Tableau Embedding API v3 (resmi — tidak diblokir X-Frame-Options) -->
+<script type="module" src="https://public.tableau.com/javascripts/api/tableau.embedding.3.latest.min.js"></script>
+
 <div id="panel-tableau">
   <div class="tableau-wrap">
+
     <div class="tableau-header">
       <div>
         <h2>Dashboard Adventure Works — Tableau Public</h2>
         <p>Visualisasi interaktif dengan filter, drill-down, dan tooltip lintas grafik.</p>
       </div>
       <a class="tableau-link"
-         href="https://public.tableau.com/views/DashboardSuperstore_17803056910230/Dashboard1"
+         id="tableau-open-link"
+         href="https://public.tableau.com/views/dashboardeas1/Dashboard1"
          target="_blank" rel="noopener">
         Buka di Tableau Public ↗
       </a>
     </div>
-    <div class="tableau-iframe-wrap">
-      <iframe id="tableau-iframe" src=""
-        data-src="https://public.tableau.com/views/DashboardSuperstore_17803056910230/Dashboard1?:embed=yes&:display_count=no&:toolbar=yes&:showVizHome=no"
-        allowfullscreen
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox">
-      </iframe>
+
+    <!-- Tableau Embedding API v3 — ganti atribut src dengan URL viz kamu -->
+    <div class="tableau-viz-wrap" id="tableau-viz-wrap">
+
+      <!-- Loading state -->
+      <div class="tableau-loading" id="tableau-loading">
+        <div class="tb-spinner"></div>
+        <p>Memuat Tableau Dashboard...</p>
+      </div>
+
+      <!-- Komponen resmi Tableau Embedding API v3 -->
+      <tableau-viz
+        id="tableauViz"
+        src="https://public.tableau.com/views/dashboardeas1/Dashboard1"
+        toolbar="bottom"
+        hide-tabs="false"
+        style="width:100%;height:750px;display:block;"
+      ></tableau-viz>
+
     </div>
-    <p class="tableau-note">Setelah publish Tableau Public, ganti URL di tag data-src dengan URL dashboard kamu.</p>
+
+    <!-- Fallback: muncul jika viz gagal load -->
+    <div class="tableau-fallback" id="tableau-fallback" style="display:none;">
+      <div class="tf-icon">📊</div>
+      <h3>Dashboard Tableau Public</h3>
+      <p>Tidak dapat memuat viz langsung di halaman ini.<br>
+         Klik tombol di bawah untuk membuka di tab baru.</p>
+      <a class="tf-btn"
+         href="https://public.tableau.com/views/dashboardeas1/Dashboard1"
+         target="_blank" rel="noopener">
+        Buka Dashboard Tableau ↗
+      </a>
+    </div>
+
+    <p class="tableau-note">
+      Powered by Tableau Embedding API v3 &nbsp;·&nbsp;
+      Jika viz tidak muncul, pastikan URL dashboard sudah benar dan sudah di-publish ke Tableau Public.
+    </p>
+
   </div>
 </div>
+
+<script>
+// ── Tableau Embedding API v3 — handle load & error ────────────
+(function() {
+  // Tunggu custom element siap
+  const MAX_WAIT = 8000; // 8 detik timeout
+  const loadingEl  = document.getElementById('tableau-loading');
+  const fallbackEl = document.getElementById('tableau-fallback');
+  const vizEl      = document.getElementById('tableauViz');
+
+  if (!vizEl) return;
+
+  // Sembunyikan loading saat viz siap
+  vizEl.addEventListener('firstinteractive', () => {
+    if (loadingEl) loadingEl.style.display = 'none';
+  });
+
+  // Tampilkan fallback jika error
+  vizEl.addEventListener('vizloaderror', () => {
+    if (loadingEl)  loadingEl.style.display  = 'none';
+    if (fallbackEl) fallbackEl.style.display  = 'flex';
+  });
+
+  // Timeout fallback jika API tidak merespons sama sekali
+  setTimeout(() => {
+    if (loadingEl && loadingEl.style.display !== 'none') {
+      loadingEl.style.display  = 'none';
+      if (fallbackEl) fallbackEl.style.display = 'flex';
+    }
+  }, MAX_WAIT);
+})();
+</script>
 
 <!-- ══════════════════════════════════════════
      PANEL AI DASHBOARD
